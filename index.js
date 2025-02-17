@@ -1,5 +1,15 @@
 const fs = require('fs');
 
+const alarmCodes = {
+    "00": "normal",
+    "01": "sos",
+    "02": "power_cut_alarm",
+    "03": "vibration_alarm",
+    "04": "enter_fence_alarm",
+    "FE": "accon",
+    "FF": "accoff"
+};
+
 function parseTrackerLog(logContent) {
     const lines = logContent.split('\n').map(line => line.trim()).filter(line => line);
     const parsedData = [];
@@ -64,11 +74,9 @@ function parseTrackerLog(logContent) {
             accStatus = (parseInt(parts[5], 16) & 0x02) ? 'on' : 'off';
         }
         
-        else if (protocolNumber === '16' && packetLength >= 6) {
-            const alarmType = parseInt(parts[4], 16);
-            if (alarmType === 0xFE) alarmStatus = "accon";
-            else if (alarmType === 0xFF) alarmStatus = "accoff";
-            else alarmStatus = "tracker";
+        else if (protocolNumber === '16' && packetLength >= 12) {
+            const alarmType = parts[parts.length - 4].toUpperCase();
+            alarmStatus = alarmCodes[alarmType] ? alarmCodes[alarmType] : (alarmType === '00' ? 'normal' : 'tracker');
         }
     });
 
