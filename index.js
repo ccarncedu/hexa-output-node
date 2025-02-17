@@ -1,66 +1,85 @@
 const fs = require('fs');
-const path = require('path');
 
-const logFilePath = path.join(__dirname, 'Rastreador_Pacotes_Recebidos.log');
+function parseTrackerLog(logContent) {
+    const lines = logContent.split('\n').map(line => line.trim()).filter(line => line);
+    const parsedData = [];
+    let imei = "";
+    let batteryLevel = "";
+    let accStatus = "";
+    let alarmStatus = "tracker";
 
-const hexToDecimal = (hex) => parseInt(hex, 16);
-
-const parseCoordinate = (hex) => {
-    const decimalValue = hexToDecimal(hex);
-    return (decimalValue / 1800000).toFixed(6);
-};
-
-const alarmCodes = {
-    "00": "normal",
-    "01": "sos",
-    "02": "power_cut_alarm",
-    "03": "vibration_alarm",
-    "04": "enter_fence_alarm",
-    "FE": "acc_on",
-    "FF": "acc_off"
-};
-
-
-const processLogFile = (filePath) => {
-    try {
-        const logData = fs.readFileSync(filePath, 'utf8');
-        const packets = logData.split('\n').map(line => line.trim()).filter(line => line);
+    lines.forEach(line => {
+        const parts = line.split(' ');
+        if (parts.length < 5 || parts[0] !== '78' || parts[1] !== '78') return;
         
-        const processedPackets = packets.map(packet => parsePacket(packet)).filter(p => p !== null);
+        const packetLength = parseInt(parts[2], 16);
+        const protocolNumber = parts[3];
         
-        fs.writeFileSync('output.json', JSON.stringify(processedPackets, null, 4));
-        console.log('JSON gerado com sucesso! Verifique output.json');
-    } catch (error) {
-        console.error('Erro ao processar o arquivo:', error);
+        if (protocolNumber === '01' && packetLength >= 12) {
+            imei = parts.slice(4, 12).join('');
+        }
+        
+        else if (protocolNumber === '12' && packetLength >= 24) {
+            const year = parseInt(parts[4], 16) + 2000;
+            const month = parseInt(parts[5], 16);
+            const day = parseInt(parts[6], 16);
+            const hour = parseInt(parts[7], 16);
+            const minute = parseInt(parts[8], 16);
+            const second = parseInt(parts[9], 16);
+            const gpsSignal = parseInt(parts[10], 16) > 0 ? 'F' : 'A';
+            
+            const latitudeRaw = parseInt(parts.slice(11, 15).map(hex => hex.padStart(2, '0')).join(''), 16);
+            const longitudeRaw = parseInt(parts.slice(15, 19).map(hex => hex.padStart(2, '0')).join(''), 16);
+            const speed = parseInt(parts[19], 16);
+            const direction = parseInt(parts.slice(20, 22).map(hex => hex.padStart(2, '0')).join(''), 16) & 0x03FF;
+            
+            const latitude = latitudeRaw / 1800000.0;
+            const longitude = longitudeRaw / 1800000.0;
+            const latitudeHemisferio = (direction & 0x02) ? 'N' : 'S';
+            const longitudeHemisferio = (direction & 0x08) ? 'E' : 'W';
+            
+            const timestamp = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ` +
+                              `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`;
+            
+            parsedData.push({
+                gps: gpsSignal,
+                latitude: latitude.toFixed(8),
+                longitude: longitude.toFixed(8),
+                latitudeHemisferio,
+                longitudeHemisferio,
+                speed,
+                imei,
+                data: timestamp,
+                alarm: alarmStatus,
+                acc: accStatus,
+                direcao: direction,
+                nivelBateria: batteryLevel
+            });
+        }
+        
+        else if (protocolNumber === '13' && packetLength >= 6) {
+            const voltageLevel = parseInt(parts[4], 16);
+            const batteryMapping = [0, 20, 40, 60, 80, 100, 100];
+            batteryLevel = batteryMapping[Math.min(voltageLevel, batteryMapping.length - 1)];
+            accStatus = (parseInt(parts[5], 16) & 0x02) ? 'on' : 'off';
+        }
+        
+        else if (protocolNumber === '16' && packetLength >= 6) {
+            const alarmType = parseInt(parts[4], 16);
+            if (alarmType === 0xFE) alarmStatus = "accon";
+            else if (alarmType === 0xFF) alarmStatus = "accoff";
+            else alarmStatus = "tracker";
+        }
+    });
+
+    return parsedData;
+}
+
+fs.readFile('Rastreador_Pacotes_Recebidos.log', 'utf8', (err, data) => {
+    if (err) {
+        console.error('Erro ao ler o arquivo:', err);
+        return;
     }
-};
-
-
-const parsePacket = (packet) => {
-    const data = packet.replace(/\s+/g, ''); 
-    if (!data.startsWith('7878')) return null; 
-
-    const protocolNumber = data.slice(6, 8);
-    const isLocationPacket = protocolNumber === '12';
-    const isLoginPacket = protocolNumber === '01';
-    const isHeartbeatPacket = protocolNumber === '13';
-    const isAlarmPacket = protocolNumber === '16';
-    
-    return {
-        gps: isLocationPacket ? (data.slice(14, 16) !== '00' ? 'F' : 'A') : "N/A",
-        latitude: isLocationPacket ? parseCoordinate(data.slice(18, 26)) : "N/A",
-        longitude: isLocationPacket ? parseCoordinate(data.slice(26, 34)) : "N/A",
-        latitudeHemisferio: isLocationPacket ? ((parseInt(data.slice(34, 36), 16) & 0x02) ? 'N' : 'S') : "N/A",
-        longitudeHemisferio: isLocationPacket ? ((parseInt(data.slice(34, 36), 16) & 0x08) ? 'E' : 'W') : "N/A",
-        speed: isLocationPacket ? hexToDecimal(data.slice(36, 38)) : "N/A",
-        imei: isLoginPacket ? data.slice(8, 24) : "N/A",
-        data: isLocationPacket ? `20${hexToDecimal(data.slice(8, 10))}-${hexToDecimal(data.slice(10, 12))}-${hexToDecimal(data.slice(12, 14))} ` +
-              `${hexToDecimal(data.slice(14, 16))}:${hexToDecimal(data.slice(16, 18))}:${hexToDecimal(data.slice(18, 20))}` : "N/A",
-        alarm: isAlarmPacket ? (alarmCodes[data.slice(10, 12)] || "tracker") : "N/A",
-        acc: isLocationPacket ? ((parseInt(data.slice(34, 36), 16) & 0x04) ? 'on' : 'off') : "N/A",
-        direcao: isLocationPacket ? hexToDecimal(data.slice(38, 42)) : "N/A",
-        nivelBateria: isHeartbeatPacket ? `${hexToDecimal(data.slice(10, 12)) * 20}%` : "N/A"
-    };
-};
-
-processLogFile(logFilePath);
+    const result = parseTrackerLog(data);
+    console.log(JSON.stringify(result, null, 2));
+});
