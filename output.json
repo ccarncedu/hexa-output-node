@@ -1,0 +1,87 @@
+[
+    {
+      "gps": "F",
+      "latitude": "-21.85976667",
+      "longitude": "-47.45273333",
+      "latitudeHemisferio": "S",
+      "longitudeHemisferio": "W",
+      "speed": 0,
+      "imei": "0354778340754723",
+      "data": "2021-11-11 07:02:07",
+      "alarm": "tracker",
+      "acc": "off",
+      "direcao": 43,
+      "nivelBateria": 69
+    },
+    {
+      "gps": "F",
+      "latitude": "21.85928333",
+      "longitude": "47.45631667",
+      "latitudeHemisferio": "N",
+      "longitudeHemisferio": "E",
+      "speed": 15,
+      "imei": "0354778340754723",
+      "data": "2021-11-11 10:25:34",
+      "alarm": "tracker",
+      "acc": "off",
+      "direcao": 277,
+      "nivelBateria": 69
+    },
+    {
+      "gps": "F",
+      "latitude": "21.85176667",
+      "longitude": "47.46998333",
+      "latitudeHemisferio": "N",
+      "longitudeHemisferio": "E",
+      "speed": 41,
+      "imei": "0354778340754723",
+      "data": "2021-11-11 10:28:19",
+      "alarm": "tracker",
+      "acc": "off",
+      "direcao": 276,
+      "nivelBateria": 69
+    },
+    {
+      "gps": "F",
+      "latitude": "-21.85853333",
+      "longitude": "47.48255000",
+      "latitudeHemisferio": "S",
+      "longitudeHemisferio": "E",
+      "speed": 24,
+      "imei": "0354778340754723",
+      "data": "2021-11-11 10:33:21",
+      "alarm": "tracker",
+      "acc": "off",
+      "direcao": 274,
+      "nivelBateria": 70
+    },
+    {
+      "gps": "F",
+      "latitude": "-21.85181667",
+      "longitude": "-47.47866667",
+      "latitudeHemisferio": "S",
+      "longitudeHemisferio": "W",
+      "speed": 19,
+      "imei": "0354778340754723",
+      "data": "2021-11-11 21:12:29",
+      "alarm": "tracker",
+      "acc": "off",
+      "direcao": 79,
+      "nivelBateria": 70
+    },
+    {
+      "gps": "F",
+      "latitude": "21.85975000",
+      "longitude": "47.45283333",
+      "latitudeHemisferio": "N",
+      "longitudeHemisferio": "E",
+      "speed": 0,
+      "imei": "0354778340754723",
+      "data": "2021-11-11 21:22:17",
+      "alarm": "tracker",
+      "acc": "off",
+      "direcao": 149,
+      "nivelBateria": 70
+    }
+  ]
+  
