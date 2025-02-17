@@ -41,12 +41,14 @@ function parseTrackerLog(logContent) {
             const latitudeRaw = parseInt(parts.slice(11, 15).map(hex => hex.padStart(2, '0')).join(''), 16);
             const longitudeRaw = parseInt(parts.slice(15, 19).map(hex => hex.padStart(2, '0')).join(''), 16);
             const speed = parseInt(parts[19], 16);
-            const direction = parseInt(parts.slice(20, 22).map(hex => hex.padStart(2, '0')).join(''), 16) & 0x03FF;
+            const directionByte = parseInt(parts.slice(20, 22).map(hex => hex.padStart(2, '0')).join(''), 16);
+            const direction = directionByte & 0x03FF;
             
-            const latitude = latitudeRaw / 1800000.0;
-            const longitude = longitudeRaw / 1800000.0;
-            const latitudeHemisferio = (direction & 0x02) ? 'N' : 'S';
-            const longitudeHemisferio = (direction & 0x08) ? 'E' : 'W';
+            const latitudeHemisferio = (directionByte & 0x02) ? 'S' : 'N';
+            const longitudeHemisferio = (directionByte & 0x08) ? 'W' : 'E';
+            
+            const latitude = (latitudeHemisferio === 'S' ? -1 : 1) * (latitudeRaw / 1800000.0);
+            const longitude = (longitudeHemisferio === 'W' ? -1 : 1) * (longitudeRaw / 1800000.0);
             
             const timestamp = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ` +
                               `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`;
@@ -69,10 +71,23 @@ function parseTrackerLog(logContent) {
         
         else if (protocolNumber === '13' && packetLength >= 6) {
             const voltageLevel = parseInt(parts[4], 16);
-            const batteryMapping = [0, 20, 40, 60, 80, 100, 100];
-            batteryLevel = batteryMapping[Math.min(voltageLevel, batteryMapping.length - 1)];
+        
+        
+            const batteryMapping = {
+                0x00: 0,    
+                0x01: 10,   
+                0x02: 20,   
+                0x03: 40,   
+                0x04: 60,   
+                0x05: 80,   
+                0x06: 100  
+            };
+        
+            batteryLevel = batteryMapping[voltageLevel] ?? voltageLevel
+        
             accStatus = (parseInt(parts[5], 16) & 0x02) ? 'on' : 'off';
         }
+        
         
         else if (protocolNumber === '16' && packetLength >= 12) {
             const alarmType = parts[parts.length - 4].toUpperCase();
